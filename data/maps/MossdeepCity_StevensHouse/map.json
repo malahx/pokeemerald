@@ -2,7 +2,7 @@
   "id": "MAP_MOSSDEEP_CITY_STEVENS_HOUSE",
   "name": "MossdeepCity_StevensHouse",
   "layout": "LAYOUT_MOSSDEEP_CITY_STEVENS_HOUSE",
-  "music": "MUS_GOTOWN",
+  "music": "MUS_RUSTBORO",
   "region_map_section": "MAPSEC_MOSSDEEP_CITY",
   "requires_flash": false,
   "weather": "WEATHER_NONE",
@@ -60,14 +60,14 @@
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_MOSSDEEP_CITY",
-      "dest_warp_id": 6
+      "dest_warp_id": "6"
     },
     {
       "x": 4,
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_MOSSDEEP_CITY",
-      "dest_warp_id": 6
+      "dest_warp_id": "6"
     }
   ],
   "coord_events": [],

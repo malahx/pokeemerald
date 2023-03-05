@@ -2,7 +2,7 @@
   "id": "MAP_TRAINER_HILL_ELEVATOR",
   "name": "TrainerHill_Elevator",
   "layout": "LAYOUT_BATTLE_ELEVATOR",
-  "music": "MUS_B_TOWER",
+  "music": "MUS_B_TOWER_RS",
   "region_map_section": "MAPSEC_TRAINER_HILL",
   "requires_flash": false,
   "weather": "WEATHER_NONE",
@@ -34,14 +34,14 @@
       "y": 6,
       "elevation": 3,
       "dest_map": "MAP_TRAINER_HILL_ROOF",
-      "dest_warp_id": 1
+      "dest_warp_id": "1"
     },
     {
       "x": 2,
       "y": 6,
       "elevation": 3,
       "dest_map": "MAP_TRAINER_HILL_ROOF",
-      "dest_warp_id": 1
+      "dest_warp_id": "1"
     }
   ],
   "coord_events": [],

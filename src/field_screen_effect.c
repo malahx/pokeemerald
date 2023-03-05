@@ -12,6 +12,7 @@
 #include "field_special_scene.h"
 #include "field_weather.h"
 #include "gpu_regs.h"
+#include "io_reg.h"
 #include "link.h"
 #include "link_rfu.h"
 #include "load_save.h"
@@ -34,29 +35,27 @@
 #include "trainer_hill.h"
 #include "fldeff.h"
 
-extern const u16 gOrbEffectBackgroundLayerFlags[];
-
-// This file's functions.
-static void sub_8080B9C(u8);
 static void Task_ExitNonAnimDoor(u8);
 static void Task_ExitNonDoor(u8);
-static void task0A_fade_n_map_maybe(u8);
-static void sub_808115C(u8);
+static void Task_DoContestHallWarp(u8);
 static void FillPalBufferWhite(void);
 static void Task_ExitDoor(u8);
 static bool32 WaitForWeatherFadeIn(void);
-static void task0A_mpl_807E31C(u8 taskId);
+static void Task_SpinEnterWarp(u8 taskId);
 static void Task_WarpAndLoadMap(u8 taskId);
 static void Task_DoDoorWarp(u8 taskId);
 static void Task_EnableScriptAfterMusicFade(u8 taskId);
 
-// const
-static const u16 sFlashLevelPixelRadii[] = { 200, 72, 64, 56, 48, 40, 32, 24, 0 };
-const s32 gMaxFlashLevel = ARRAY_COUNT(sFlashLevelPixelRadii) - 1;
+// data[0] is used universally by tasks in this file as a state for switches
+#define tState       data[0]
 
-const struct ScanlineEffectParams sFlashEffectParams =
+// Smaller flash level -> larger flash radius
+static const u16 sFlashLevelToRadius[] = { 200, 72, 64, 56, 48, 40, 32, 24, 0 };
+const s32 gMaxFlashLevel = ARRAY_COUNT(sFlashLevelToRadius) - 1;
+
+static const struct ScanlineEffectParams sFlashEffectParams =
 {
-    (void *)REG_ADDR_WIN0H,
+    &REG_WIN0H,
     ((DMA_ENABLE | DMA_START_HBLANK | DMA_REPEAT | DMA_DEST_RELOAD) << 16) | 1,
     1
 };
@@ -125,7 +124,7 @@ static void Task_WaitForUnionRoomFade(u8 taskId)
 
 void FieldCB_ContinueScriptUnionRoom(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     Overworld_PlaySpecialMapMusic();
     FadeInFromBlack();
     CreateTask(Task_WaitForUnionRoomFade, 10);
@@ -136,13 +135,13 @@ static void Task_WaitForFadeAndEnableScriptCtx(u8 taskID)
     if (WaitForWeatherFadeIn() == TRUE)
     {
         DestroyTask(taskID);
-        EnableBothScriptContexts();
+        ScriptContext_Enable();
     }
 }
 
 void FieldCB_ContinueScriptHandleMusic(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     Overworld_PlaySpecialMapMusic();
     FadeInFromBlack();
     CreateTask(Task_WaitForFadeAndEnableScriptCtx, 10);
@@ -150,7 +149,7 @@ void FieldCB_ContinueScriptHandleMusic(void)
 
 void FieldCB_ContinueScript(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     FadeInFromBlack();
     CreateTask(Task_WaitForFadeAndEnableScriptCtx, 10);
 }
@@ -159,23 +158,23 @@ static void Task_ReturnToFieldCableLink(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
-        task->data[1] = sub_80B3050();
-        task->data[0]++;
+        task->data[1] = CreateTask_ReestablishCableClubLink();
+        task->tState++;
         break;
     case 1:
         if (gTasks[task->data[1]].isActive != TRUE)
         {
             WarpFadeInScreen();
-            task->data[0]++;
+            task->tState++;
         }
         break;
     case 2:
         if (WaitForWeatherFadeIn() == TRUE)
         {
-            ScriptContext2_Disable();
+            UnlockPlayerFieldControls();
             DestroyTask(taskId);
         }
         break;
@@ -184,7 +183,7 @@ static void Task_ReturnToFieldCableLink(u8 taskId)
 
 void FieldCB_ReturnToFieldCableLink(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     Overworld_PlaySpecialMapMusic();
     FillPalBufferBlack();
     CreateTask(Task_ReturnToFieldCableLink, 10);
@@ -194,29 +193,29 @@ static void Task_ReturnToFieldWirelessLink(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
-        sub_800ADF8();
-        task->data[0]++;
+        SetLinkStandbyCallback();
+        task->tState++;
         break;
     case 1:
         if (!IsLinkTaskFinished())
         {
             if (++task->data[1] > 1800)
-                sub_8011170(0x6000);
+                RfuSetErrorParams(F_RFU_ERROR_6 | F_RFU_ERROR_7);
         }
         else
         {
             WarpFadeInScreen();
-            task->data[0]++;
+            task->tState++;
         }
         break;
     case 2:
         if (WaitForWeatherFadeIn() == TRUE)
         {
-            sub_8009F18();
-            ScriptContext2_Disable();
+            StartSendingKeysToLink();
+            UnlockPlayerFieldControls();
             DestroyTask(taskId);
         }
         break;
@@ -227,22 +226,20 @@ void Task_ReturnToFieldRecordMixing(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
-        sub_800ADF8();
-        task->data[0]++;
+        SetLinkStandbyCallback();
+        task->tState++;
         break;
     case 1:
         if (IsLinkTaskFinished())
-        {
-            task->data[0]++;
-        }
+            task->tState++;
         break;
     case 2:
-        sub_8009F18();
+        StartSendingKeysToLink();
         ResetAllMultiplayerState();
-        ScriptContext2_Disable();
+        UnlockPlayerFieldControls();
         DestroyTask(taskId);
         break;
     }
@@ -250,7 +247,7 @@ void Task_ReturnToFieldRecordMixing(u8 taskId)
 
 void FieldCB_ReturnToFieldWirelessLink(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     Overworld_PlaySpecialMapMusic();
     FillPalBufferBlack();
     CreateTask(Task_ReturnToFieldWirelessLink, 10);
@@ -278,7 +275,7 @@ void FieldCB_DefaultWarpExit(void)
     Overworld_PlaySpecialMapMusic();
     WarpFadeInScreen();
     SetUpWarpExitTask();
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
 }
 
 void FieldCB_WarpExitFadeFromWhite(void)
@@ -286,35 +283,35 @@ void FieldCB_WarpExitFadeFromWhite(void)
     Overworld_PlaySpecialMapMusic();
     FadeInFromWhite();
     SetUpWarpExitTask();
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
 }
 
 void FieldCB_WarpExitFadeFromBlack(void)
 {
-    if (!sub_81D6534()) // sub_81D6534 always returns false
+    if (!OnTrainerHillEReaderChallengeFloor()) // always false
         Overworld_PlaySpecialMapMusic();
     FadeInFromBlack();
     SetUpWarpExitTask();
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
 }
 
-static void FieldCB_TeleportWarpExit(void)
+static void FieldCB_SpinEnterWarp(void)
 {
     Overworld_PlaySpecialMapMusic();
     WarpFadeInScreen();
-    PlaySE(SE_TK_WARPOUT);
-    CreateTask(task0A_mpl_807E31C, 10);
-    ScriptContext2_Enable();
+    PlaySE(SE_WARP_OUT);
+    CreateTask(Task_SpinEnterWarp, 10);
+    LockPlayerFieldControls();
 }
 
 static void FieldCB_MossdeepGymWarpExit(void)
 {
     Overworld_PlaySpecialMapMusic();
     WarpFadeInScreen();
-    PlaySE(SE_TK_WARPOUT);
+    PlaySE(SE_WARP_OUT);
     CreateTask(Task_ExitNonDoor, 10);
-    ScriptContext2_Enable();
-    sub_8085540(0xE);
+    LockPlayerFieldControls();
+    SetObjectEventLoadFlag((~SKIP_OBJECT_EVENT_LOAD) & 0xF);
 }
 
 static void Task_ExitDoor(u8 taskId)
@@ -323,14 +320,14 @@ static void Task_ExitDoor(u8 taskId)
     s16 *x = &task->data[2];
     s16 *y = &task->data[3];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
         SetPlayerVisibility(FALSE);
         FreezeObjectEvents();
         PlayerGetDestCoords(x, y);
         FieldSetDoorOpened(*x, *y);
-        task->data[0] = 1;
+        task->tState = 1;
         break;
     case 1:
         if (WaitForWeatherFadeIn())
@@ -339,7 +336,7 @@ static void Task_ExitDoor(u8 taskId)
             SetPlayerVisibility(TRUE);
             objEventId = GetObjectEventIdByLocalIdAndMap(OBJ_EVENT_ID_PLAYER, 0, 0);
             ObjectEventSetHeldMovement(&gObjectEvents[objEventId], MOVEMENT_ACTION_WALK_NORMAL_DOWN);
-            task->data[0] = 2;
+            task->tState = 2;
         }
         break;
     case 2:
@@ -349,18 +346,18 @@ static void Task_ExitDoor(u8 taskId)
             task->data[1] = FieldAnimateDoorClose(*x, *y);
             objEventId = GetObjectEventIdByLocalIdAndMap(OBJ_EVENT_ID_PLAYER, 0, 0);
             ObjectEventClearHeldMovementIfFinished(&gObjectEvents[objEventId]);
-            task->data[0] = 3;
+            task->tState = 3;
         }
         break;
     case 3:
         if (task->data[1] < 0 || gTasks[task->data[1]].isActive != TRUE)
         {
             UnfreezeObjectEvents();
-            task->data[0] = 4;
+            task->tState = 4;
         }
         break;
     case 4:
-        ScriptContext2_Disable();
+        UnlockPlayerFieldControls();
         DestroyTask(taskId);
         break;
     }
@@ -372,13 +369,13 @@ static void Task_ExitNonAnimDoor(u8 taskId)
     s16 *x = &task->data[2];
     s16 *y = &task->data[3];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
         SetPlayerVisibility(FALSE);
         FreezeObjectEvents();
         PlayerGetDestCoords(x, y);
-        task->data[0] = 1;
+        task->tState = 1;
         break;
     case 1:
         if (WaitForWeatherFadeIn())
@@ -387,18 +384,18 @@ static void Task_ExitNonAnimDoor(u8 taskId)
             SetPlayerVisibility(TRUE);
             objEventId = GetObjectEventIdByLocalIdAndMap(OBJ_EVENT_ID_PLAYER, 0, 0);
             ObjectEventSetHeldMovement(&gObjectEvents[objEventId], GetWalkNormalMovementAction(GetPlayerFacingDirection()));
-            task->data[0] = 2;
+            task->tState = 2;
         }
         break;
     case 2:
         if (IsPlayerStandingStill())
         {
             UnfreezeObjectEvents();
-            task->data[0] = 3;
+            task->tState = 3;
         }
         break;
     case 3:
-        ScriptContext2_Disable();
+        UnlockPlayerFieldControls();
         DestroyTask(taskId);
         break;
     }
@@ -406,18 +403,18 @@ static void Task_ExitNonAnimDoor(u8 taskId)
 
 static void Task_ExitNonDoor(u8 taskId)
 {
-    switch (gTasks[taskId].data[0])
+    switch (gTasks[taskId].tState)
     {
     case 0:
         FreezeObjectEvents();
-        ScriptContext2_Enable();
-        gTasks[taskId].data[0]++;
+        LockPlayerFieldControls();
+        gTasks[taskId].tState++;
         break;
     case 1:
         if (WaitForWeatherFadeIn())
         {
             UnfreezeObjectEvents();
-            ScriptContext2_Disable();
+            UnlockPlayerFieldControls();
             DestroyTask(taskId);
         }
         break;
@@ -437,7 +434,7 @@ void ReturnToFieldOpenStartMenu(void)
 {
     FadeInFromBlack();
     CreateTask(Task_WaitForFadeShowStartMenu, 0x50);
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
 }
 
 bool8 FieldCB_ReturnToFieldOpenStartMenu(void)
@@ -446,29 +443,29 @@ bool8 FieldCB_ReturnToFieldOpenStartMenu(void)
     return FALSE;
 }
 
-static void task_mpl_807E3C8(u8 taskId)
+static void Task_ReturnToFieldNoScript(u8 taskId)
 {
     if (WaitForWeatherFadeIn() == 1)
     {
-        ScriptContext2_Disable();
+        UnlockPlayerFieldControls();
         DestroyTask(taskId);
         ScriptUnfreezeObjectEvents();
     }
 }
 
-void sub_80AF6D4(void)
+void FieldCB_ReturnToFieldNoScript(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     FadeInFromBlack();
-    CreateTask(task_mpl_807E3C8, 10);
+    CreateTask(Task_ReturnToFieldNoScript, 10);
 }
 
-void sub_80AF6F0(void)
+void FieldCB_ReturnToFieldNoScriptCheckMusic(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     Overworld_PlaySpecialMapMusic();
     FadeInFromBlack();
-    CreateTask(task_mpl_807E3C8, 10);
+    CreateTask(Task_ReturnToFieldNoScript, 10);
 }
 
 static bool32 PaletteFadeActive(void)
@@ -486,18 +483,18 @@ static bool32 WaitForWeatherFadeIn(void)
 
 void DoWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     TryFadeOutOldMapMusic();
     WarpFadeOutScreen();
     PlayRainStoppingSoundEffect();
-    PlaySE(SE_KAIDAN);
+    PlaySE(SE_EXIT);
     gFieldCallback = FieldCB_DefaultWarpExit;
     CreateTask(Task_WarpAndLoadMap, 10);
 }
 
 void DoDiveWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     TryFadeOutOldMapMusic();
     WarpFadeOutScreen();
     PlayRainStoppingSoundEffect();
@@ -505,9 +502,9 @@ void DoDiveWarp(void)
     CreateTask(Task_WarpAndLoadMap, 10);
 }
 
-void DoSootopolisLegendWarp(void)
+void DoWhiteFadeWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     TryFadeOutOldMapMusic();
     FadeScreen(FADE_TO_WHITE, 8);
     PlayRainStoppingSoundEffect();
@@ -517,7 +514,7 @@ void DoSootopolisLegendWarp(void)
 
 void DoDoorWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     gFieldCallback = FieldCB_DefaultWarpExit;
     CreateTask(Task_DoDoorWarp, 10);
 }
@@ -530,65 +527,68 @@ void DoFallWarp(void)
 
 void DoEscalatorWarp(u8 metatileBehavior)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     StartEscalatorWarp(metatileBehavior, 10);
 }
 
 void DoLavaridgeGymB1FWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     StartLavaridgeGymB1FWarp(10);
 }
 
 void DoLavaridgeGym1FWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     StartLavaridgeGym1FWarp(10);
 }
 
-void DoTeleportWarp(void)
+// DoSpinEnterWarp but with a fade out
+// Screen fades out to exit current map, player spins down from top to enter new map
+// Used by teleporting tiles, e.g. in Aqua Hideout (For the move Teleport see FldEff_TeleportWarpOut)
+void DoTeleportTileWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     TryFadeOutOldMapMusic();
     WarpFadeOutScreen();
-    PlaySE(SE_TK_WARPIN);
+    PlaySE(SE_WARP_IN);
     CreateTask(Task_WarpAndLoadMap, 10);
-    gFieldCallback = FieldCB_TeleportWarpExit;
+    gFieldCallback = FieldCB_SpinEnterWarp;
 }
 
 void DoMossdeepGymWarp(void)
 {
-    sub_8085540(1);
-    ScriptContext2_Enable();
+    SetObjectEventLoadFlag(SKIP_OBJECT_EVENT_LOAD);
+    LockPlayerFieldControls();
     SaveObjectEvents();
     TryFadeOutOldMapMusic();
     WarpFadeOutScreen();
-    PlaySE(SE_TK_WARPIN);
+    PlaySE(SE_WARP_IN);
     CreateTask(Task_WarpAndLoadMap, 10);
     gFieldCallback = FieldCB_MossdeepGymWarpExit;
 }
 
 void DoPortholeWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     WarpFadeOutScreen();
     CreateTask(Task_WarpAndLoadMap, 10);
     gFieldCallback = FieldCB_ShowPortholeView;
 }
 
-static void sub_80AF8E0(u8 taskId)
+static void Task_DoCableClubWarp(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
-        ScriptContext2_Enable();
-        task->data[0]++;
+        LockPlayerFieldControls();
+        task->tState++;
         break;
     case 1:
         if (!PaletteFadeActive() && BGMusicStopped())
-            task->data[0]++;
+            task->tState++;
         break;
     case 2:
         WarpIntoMap();
@@ -600,31 +600,31 @@ static void sub_80AF8E0(u8 taskId)
 
 void DoCableClubWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     TryFadeOutOldMapMusic();
     WarpFadeOutScreen();
-    PlaySE(SE_KAIDAN);
-    CreateTask(sub_80AF8E0, 10);
+    PlaySE(SE_EXIT);
+    CreateTask(Task_DoCableClubWarp, 10);
 }
 
 static void Task_ReturnToWorldFromLinkRoom(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
 
-    switch (data[0])
+    switch (tState)
     {
     case 0:
         ClearLinkCallback_2();
         FadeScreen(FADE_TO_BLACK, 0);
         TryFadeOutOldMapMusic();
-        PlaySE(SE_KAIDAN);
-        data[0]++;
+        PlaySE(SE_EXIT);
+        tState++;
         break;
     case 1:
         if (!PaletteFadeActive() && BGMusicStopped())
         {
-            sub_800AC34();
-            data[0]++;
+            SetCloseLinkCallback();
+            tState++;
         }
         break;
     case 2:
@@ -647,12 +647,12 @@ static void Task_WarpAndLoadMap(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
         FreezeObjectEvents();
-        ScriptContext2_Enable();
-        task->data[0]++;
+        LockPlayerFieldControls();
+        task->tState++;
         break;
     case 1:
         if (!PaletteFadeActive())
@@ -663,7 +663,7 @@ static void Task_WarpAndLoadMap(u8 taskId)
                 task->data[1] = 1;
             }
             if (BGMusicStopped())
-                task->data[0]++;
+                task->tState++;
         }
         break;
     case 2:
@@ -680,14 +680,14 @@ static void Task_DoDoorWarp(u8 taskId)
     s16 *x = &task->data[2];
     s16 *y = &task->data[3];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
         FreezeObjectEvents();
         PlayerGetDestCoords(x, y);
         PlaySE(GetDoorSoundEffect(*x, *y - 1));
         task->data[1] = FieldAnimateDoorOpen(*x, *y - 1);
-        task->data[0] = 1;
+        task->tState = 1;
         break;
     case 1:
         if (task->data[1] < 0 || gTasks[task->data[1]].isActive != TRUE)
@@ -697,7 +697,7 @@ static void Task_DoDoorWarp(u8 taskId)
             ObjectEventClearHeldMovementIfActive(&gObjectEvents[objEventId]);
             objEventId = GetObjectEventIdByLocalIdAndMap(OBJ_EVENT_ID_PLAYER, 0, 0);
             ObjectEventSetHeldMovement(&gObjectEvents[objEventId], MOVEMENT_ACTION_WALK_NORMAL_UP);
-            task->data[0] = 2;
+            task->tState = 2;
         }
         break;
     case 2:
@@ -708,45 +708,45 @@ static void Task_DoDoorWarp(u8 taskId)
             objEventId = GetObjectEventIdByLocalIdAndMap(OBJ_EVENT_ID_PLAYER, 0, 0);
             ObjectEventClearHeldMovementIfFinished(&gObjectEvents[objEventId]);
             SetPlayerVisibility(FALSE);
-            task->data[0] = 3;
+            task->tState = 3;
         }
         break;
     case 3:
         if (task->data[1] < 0 || gTasks[task->data[1]].isActive != TRUE)
         {
-            task->data[0] = 4;
+            task->tState = 4;
         }
         break;
     case 4:
         TryFadeOutOldMapMusic();
         WarpFadeOutScreen();
         PlayRainStoppingSoundEffect();
-        task->data[0] = 0;
+        task->tState = 0;
         task->func = Task_WarpAndLoadMap;
         break;
     }
 }
 
-static void task0A_fade_n_map_maybe(u8 taskId)
+static void Task_DoContestHallWarp(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
         FreezeObjectEvents();
-        ScriptContext2_Enable();
-        task->data[0]++;
+        LockPlayerFieldControls();
+        task->tState++;
         break;
     case 1:
         if (!PaletteFadeActive() && BGMusicStopped())
         {
-            task->data[0]++;
+            task->tState++;
         }
         break;
     case 2:
         WarpIntoMap();
-        SetMainCallback2(sub_8086024);
+        SetMainCallback2(CB2_ReturnToFieldContestHall);
         DestroyTask(taskId);
         break;
     }
@@ -754,13 +754,13 @@ static void task0A_fade_n_map_maybe(u8 taskId)
 
 void DoContestHallWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     TryFadeOutOldMapMusic();
     WarpFadeOutScreen();
     PlayRainStoppingSoundEffect();
-    PlaySE(SE_KAIDAN);
+    PlaySE(SE_EXIT);
     gFieldCallback = FieldCB_WarpExitFadeFromBlack;
-    CreateTask(task0A_fade_n_map_maybe, 10);
+    CreateTask(Task_DoContestHallWarp, 10);
 }
 
 static void SetFlashScanlineEffectWindowBoundary(u16 *dest, u32 y, s32 left, s32 right)
@@ -848,22 +848,22 @@ static void UpdateFlashLevelEffect(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
 
-    switch (data[0])
+    switch (tState)
     {
     case 0:
         SetFlashScanlineEffectWindowBoundaries(gScanlineEffectRegBuffers[gScanlineEffect.srcBuffer], tFlashCenterX, tFlashCenterY, tCurFlashRadius);
-        data[0] = 1;
+        tState = 1;
         break;
     case 1:
         SetFlashScanlineEffectWindowBoundaries(gScanlineEffectRegBuffers[gScanlineEffect.srcBuffer], tFlashCenterX, tFlashCenterY, tCurFlashRadius);
-        data[0] = 0;
+        tState = 0;
         tCurFlashRadius += tFlashRadiusDelta;
         if (tCurFlashRadius > tDestFlashRadius)
         {
             if (tClearScanlineEffect == 1)
             {
                 ScanlineEffect_Stop();
-                data[0] = 2;
+                tState = 2;
             }
             else
             {
@@ -882,22 +882,22 @@ static void UpdateOrbFlashEffect(u8 taskId)
 {
     s16 *data = gTasks[taskId].data;
 
-    switch (data[0])
+    switch (tState)
     {
     case 0:
         SetOrbFlashScanlineEffectWindowBoundaries(gScanlineEffectRegBuffers[gScanlineEffect.srcBuffer], tFlashCenterX, tFlashCenterY, tCurFlashRadius);
-        data[0] = 1;
+        tState = 1;
         break;
     case 1:
         SetOrbFlashScanlineEffectWindowBoundaries(gScanlineEffectRegBuffers[gScanlineEffect.srcBuffer], tFlashCenterX, tFlashCenterY, tCurFlashRadius);
-        data[0] = 0;
+        tState = 0;
         tCurFlashRadius += tFlashRadiusDelta;
         if (tCurFlashRadius > tDestFlashRadius)
         {
             if (tClearScanlineEffect == 1)
             {
                 ScanlineEffect_Stop();
-                data[0] = 2;
+                tState = 2;
             }
             else
             {
@@ -912,22 +912,22 @@ static void UpdateOrbFlashEffect(u8 taskId)
     }
 }
 
-static void sub_80AFF90(u8 taskId)
+static void Task_WaitForFlashUpdate(u8 taskId)
 {
     if (!FuncIsActiveTask(UpdateFlashLevelEffect))
     {
-        EnableBothScriptContexts();
+        ScriptContext_Enable();
         DestroyTask(taskId);
     }
 }
 
-static void sub_80AFFB8(void)
+static void StartWaitForFlashUpdate(void)
 {
-    if (!FuncIsActiveTask(sub_80AFF90))
-        CreateTask(sub_80AFF90, 80);
+    if (!FuncIsActiveTask(Task_WaitForFlashUpdate))
+        CreateTask(Task_WaitForFlashUpdate, 80);
 }
 
-static u8 sub_80AFFDC(s32 centerX, s32 centerY, s32 initialFlashRadius, s32 destFlashRadius, s32 clearScanlineEffect, u8 delta)
+static u8 StartUpdateFlashLevelEffect(s32 centerX, s32 centerY, s32 initialFlashRadius, s32 destFlashRadius, s32 clearScanlineEffect, u8 delta)
 {
     u8 taskId = CreateTask(UpdateFlashLevelEffect, 80);
     s16 *data = gTasks[taskId].data;
@@ -946,7 +946,7 @@ static u8 sub_80AFFDC(s32 centerX, s32 centerY, s32 initialFlashRadius, s32 dest
     return taskId;
 }
 
-static u8 sub_80B003C(s32 centerX, s32 centerY, s32 initialFlashRadius, s32 destFlashRadius, s32 clearScanlineEffect, u8 delta)
+static u8 StartUpdateOrbFlashEffect(s32 centerX, s32 centerY, s32 initialFlashRadius, s32 destFlashRadius, s32 clearScanlineEffect, u8 delta)
 {
     u8 taskId = CreateTask(UpdateOrbFlashEffect, 80);
     s16 *data = gTasks[taskId].data;
@@ -970,76 +970,77 @@ static u8 sub_80B003C(s32 centerX, s32 centerY, s32 initialFlashRadius, s32 dest
 #undef tFlashRadiusDelta
 #undef tClearScanlineEffect
 
-void AnimateFlash(u8 flashLevel)
+// A higher flash level is a smaller flash radius (more darkness). 0 is full brightness
+void AnimateFlash(u8 newFlashLevel)
 {
-    u8 curFlashLevel = Overworld_GetFlashLevel();
-    u8 value = 0;
-    if (!flashLevel)
-        value = 1;
-    sub_80AFFDC(120, 80, sFlashLevelPixelRadii[curFlashLevel], sFlashLevelPixelRadii[flashLevel], value, 1);
-    sub_80AFFB8();
-    ScriptContext2_Enable();
+    u8 curFlashLevel = GetFlashLevel();
+    bool8 fullBrightness = FALSE;
+    if (newFlashLevel == 0)
+        fullBrightness = TRUE;
+    StartUpdateFlashLevelEffect(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2, sFlashLevelToRadius[curFlashLevel], sFlashLevelToRadius[newFlashLevel], fullBrightness, 1);
+    StartWaitForFlashUpdate();
+    LockPlayerFieldControls();
 }
 
 void WriteFlashScanlineEffectBuffer(u8 flashLevel)
 {
     if (flashLevel)
     {
-        SetFlashScanlineEffectWindowBoundaries(&gScanlineEffectRegBuffers[0][0], 120, 80, sFlashLevelPixelRadii[flashLevel]);
+        SetFlashScanlineEffectWindowBoundaries(&gScanlineEffectRegBuffers[0][0], DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2, sFlashLevelToRadius[flashLevel]);
         CpuFastSet(&gScanlineEffectRegBuffers[0], &gScanlineEffectRegBuffers[1], 480);
     }
 }
 
 void WriteBattlePyramidViewScanlineEffectBuffer(void)
 {
-    SetFlashScanlineEffectWindowBoundaries(&gScanlineEffectRegBuffers[0][0], 120, 80, gSaveBlock2Ptr->frontier.pyramidLightRadius);
+    SetFlashScanlineEffectWindowBoundaries(&gScanlineEffectRegBuffers[0][0], DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2, gSaveBlock2Ptr->frontier.pyramidLightRadius);
     CpuFastSet(&gScanlineEffectRegBuffers[0], &gScanlineEffectRegBuffers[1], 480);
 }
 
-static void task0A_mpl_807E31C(u8 taskId)
+static void Task_SpinEnterWarp(u8 taskId)
 {
-    switch (gTasks[taskId].data[0])
+    switch (gTasks[taskId].tState)
     {
     case 0:
         FreezeObjectEvents();
-        ScriptContext2_Enable();
-        sub_808D194();
-        gTasks[taskId].data[0]++;
+        LockPlayerFieldControls();
+        DoPlayerSpinEntrance();
+        gTasks[taskId].tState++;
         break;
     case 1:
-        if (WaitForWeatherFadeIn() && sub_808D1B4() != TRUE)
+        if (WaitForWeatherFadeIn() && IsPlayerSpinEntranceActive() != TRUE)
         {
             UnfreezeObjectEvents();
-            ScriptContext2_Disable();
+            UnlockPlayerFieldControls();
             DestroyTask(taskId);
         }
         break;
     }
 }
 
-static void sub_80B01BC(u8 taskId)
+static void Task_SpinExitWarp(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
 
-    switch (task->data[0])
+    switch (task->tState)
     {
     case 0:
         FreezeObjectEvents();
-        ScriptContext2_Enable();
-        PlaySE(SE_TK_WARPIN);
-        sub_808D1C8();
-        task->data[0]++;
+        LockPlayerFieldControls();
+        PlaySE(SE_WARP_IN);
+        DoPlayerSpinExit();
+        task->tState++;
         break;
     case 1:
-        if (!sub_808D1E8())
+        if (!IsPlayerSpinExitActive())
         {
             WarpFadeOutScreen();
-            task->data[0]++;
+            task->tState++;
         }
         break;
     case 2:
         if (!PaletteFadeActive() && BGMusicStopped())
-            task->data[0]++;
+            task->tState++;
         break;
     case 3:
         WarpIntoMap();
@@ -1049,18 +1050,22 @@ static void sub_80B01BC(u8 taskId)
     }
 }
 
-void sub_80B0244(void)
+// Only called by an unused function
+// DoTeleportTileWarp is used instead
+void DoSpinEnterWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     CreateTask(Task_WarpAndLoadMap, 10);
-    gFieldCallback = FieldCB_TeleportWarpExit;
+    gFieldCallback = FieldCB_SpinEnterWarp;
 }
 
-void sub_80B0268(void)
+// Opposite of DoSpinEnterWarp / DoTeleportTileWarp
+// Player exits current map by spinning up offscreen, enters new map with a fade in
+void DoSpinExitWarp(void)
 {
-    ScriptContext2_Enable();
+    LockPlayerFieldControls();
     gFieldCallback = FieldCB_DefaultWarpExit;
-    CreateTask(sub_80B01BC, 10);
+    CreateTask(Task_SpinExitWarp, 10);
 }
 
 static void LoadOrbEffectPalette(bool8 blueOrb)
@@ -1074,12 +1079,10 @@ static void LoadOrbEffectPalette(bool8 blueOrb)
         color[0] = RGB_BLUE;
 
     for (i = 0; i < 16; i++)
-    {
-        LoadPalette(color, 0xF0 + i, 2);
-    }
+        LoadPalette(color, BG_PLTT_ID(15) + i, PLTT_SIZEOF(1));
 }
 
-static bool8 sub_80B02C8(u16 shakeDir)
+static bool8 UpdateOrbEffectBlend(u16 shakeDir)
 {
     u8 lo = REG_BLDALPHA & 0xFF;
     u8 hi = REG_BLDALPHA >> 8;
@@ -1087,27 +1090,22 @@ static bool8 sub_80B02C8(u16 shakeDir)
     if (shakeDir != 0)
     {
         if (lo)
-        {
             lo--;
-        }
     }
     else
     {
-        if (hi < 0x10)
-        {
+        if (hi < 16)
             hi++;
-        }
     }
 
     SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(lo, hi));
 
-    if (lo == 0 && hi == 0x10)
+    if (lo == 0 && hi == 16)
         return TRUE;
     else
         return FALSE;
 }
 
-#define tState       data[0]
 #define tBlueOrb     data[1]
 #define tCenterX     data[2]
 #define tCenterY     data[3]
@@ -1136,23 +1134,23 @@ static void Task_OrbEffect(u8 taskId)
         SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(12, 7));
         SetGpuReg(REG_OFFSET_WININ, WININ_WIN0_BG_ALL | WININ_WIN0_OBJ | WININ_WIN0_CLR);
         SetGpuReg(REG_OFFSET_WINOUT, WINOUT_WIN01_BG1 | WINOUT_WIN01_BG2 | WINOUT_WIN01_BG3 | WINOUT_WIN01_OBJ);
-        SetBgTilemapPalette(0, 0, 0, 0x1E, 0x14, 0xF);
-        schedule_bg_copy_tilemap_to_vram(0);
+        SetBgTilemapPalette(0, 0, 0, DISPLAY_TILE_WIDTH, DISPLAY_TILE_HEIGHT, 0xF);
+        ScheduleBgCopyTilemapToVram(0);
         SetOrbFlashScanlineEffectWindowBoundaries(&gScanlineEffectRegBuffers[0][0], tCenterX, tCenterY, 1);
         CpuFastSet(&gScanlineEffectRegBuffers[0], &gScanlineEffectRegBuffers[1], 480);
         ScanlineEffect_SetParams(sFlashEffectParams);
         tState = 1;
         break;
     case 1:
-        sub_8199DF0(0, PIXEL_FILL(1), 0, 1);
+        BgDmaFill(0, PIXEL_FILL(1), 0, 1);
         LoadOrbEffectPalette(tBlueOrb);
-        sub_80B003C(tCenterX, tCenterY, 1, 160, 1, 2);
+        StartUpdateOrbFlashEffect(tCenterX, tCenterY, 1, 160, 1, 2);
         tState = 2;
         break;
     case 2:
         if (!FuncIsActiveTask(UpdateOrbFlashEffect))
         {
-            EnableBothScriptContexts();
+            ScriptContext_Enable();
             tState = 3;
         }
         break;
@@ -1186,10 +1184,10 @@ static void Task_OrbEffect(u8 taskId)
         {
             tShakeDelay = 8;
             tShakeDir ^= 1;
-            if (sub_80B02C8(tShakeDir) == TRUE)
+            if (UpdateOrbEffectBlend(tShakeDir) == TRUE)
             {
                 tState = 5;
-                sub_8199DF0(0, PIXEL_FILL(0), 0, 1);
+                BgDmaFill(0, PIXEL_FILL(0), 0, 1);
             }
         }
         break;
@@ -1200,7 +1198,7 @@ static void Task_OrbEffect(u8 taskId)
         SetGpuReg(REG_OFFSET_BLDALPHA, tBldAlpha);
         SetGpuReg(REG_OFFSET_WININ, tWinIn);
         SetGpuReg(REG_OFFSET_WINOUT, tWinOut);
-        EnableBothScriptContexts();
+        ScriptContext_Enable();
         DestroyTask(taskId);
         break;
     }
@@ -1241,7 +1239,6 @@ void FadeOutOrbEffect(void)
     gTasks[taskId].tState = 6;
 }
 
-#undef tState
 #undef tBlueOrb
 #undef tCenterX
 #undef tCenterY
@@ -1264,6 +1261,6 @@ static void Task_EnableScriptAfterMusicFade(u8 taskId)
     if (BGMusicStopped() == TRUE)
     {
         DestroyTask(taskId);
-        EnableBothScriptContexts();
+        ScriptContext_Enable();
     }
 }

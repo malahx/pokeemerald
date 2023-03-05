@@ -2,7 +2,7 @@
   "id": "MAP_VERDANTURF_TOWN_FRIENDSHIP_RATERS_HOUSE",
   "name": "VerdanturfTown_FriendshipRatersHouse",
   "layout": "LAYOUT_HOUSE2",
-  "music": "MUS_GOMACHI0",
+  "music": "MUS_VERDANTURF",
   "region_map_section": "MAPSEC_VERDANTURF_TOWN",
   "requires_flash": false,
   "weather": "WEATHER_NONE",
@@ -47,14 +47,14 @@
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_VERDANTURF_TOWN",
-      "dest_warp_id": 5
+      "dest_warp_id": "5"
     },
     {
       "x": 4,
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_VERDANTURF_TOWN",
-      "dest_warp_id": 5
+      "dest_warp_id": "5"
     }
   ],
   "coord_events": [],

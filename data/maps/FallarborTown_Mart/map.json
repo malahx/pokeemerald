@@ -2,7 +2,7 @@
   "id": "MAP_FALLARBOR_TOWN_MART",
   "name": "FallarborTown_Mart",
   "layout": "LAYOUT_MART",
-  "music": "MUS_FRIENDLY",
+  "music": "MUS_POKE_MART",
   "region_map_section": "MAPSEC_FALLARBOR_TOWN",
   "requires_flash": false,
   "weather": "WEATHER_NONE",
@@ -86,14 +86,14 @@
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_FALLARBOR_TOWN",
-      "dest_warp_id": 0
+      "dest_warp_id": "0"
     },
     {
       "x": 4,
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_FALLARBOR_TOWN",
-      "dest_warp_id": 0
+      "dest_warp_id": "0"
     }
   ],
   "coord_events": [],

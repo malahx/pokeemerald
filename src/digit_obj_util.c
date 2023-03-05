@@ -33,7 +33,7 @@ struct DigitPrinterAlloc
 };
 
 // this file's functions
-static u8 GetFirstOamId(u8 oamCount);;
+static u8 GetFirstOamId(u8 oamCount);
 static void CopyWorkToOam(struct DigitPrinter *objWork);
 static void DrawNumObjsLeadingZeros(struct DigitPrinter *objWork, s32 num, bool32 sign);
 static void DrawNumObjsMinusInFront(struct DigitPrinter *objWork, s32 num, bool32 sign);
@@ -138,7 +138,7 @@ bool32 DigitObjUtil_CreatePrinter(u32 id, s32 num, const struct DigitObjUtilTemp
         {
             struct CompressedSpriteSheet compSpriteSheet;
 
-            compSpriteSheet = *(struct CompressedSpriteSheet*)(template->spriteSheet);
+            compSpriteSheet = *(struct CompressedSpriteSheet *)(template->spriteSheet);
             compSpriteSheet.size = GetDecompressedDataSize(template->spriteSheet->data);
             sOamWork->array[id].tileStart = LoadCompressedSpriteSheet(&compSpriteSheet);
         }

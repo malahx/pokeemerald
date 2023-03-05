@@ -27,12 +27,15 @@ typedef double f64;
 typedef u8  bool8;
 typedef u16 bool16;
 typedef u32 bool32;
+typedef vu8  vbool8;
+typedef vu16 vbool16;
+typedef vu32 vbool32;
 
 struct BgCnt
 {
     u16 priority:2;
     u16 charBaseBlock:2;
-    u16 dummy:2;
+    u16 dsCharBaseBlock:2;
     u16 mosaic:1;
     u16 palettes:1;
     u16 screenBaseBlock:5;

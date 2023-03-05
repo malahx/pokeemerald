@@ -2,7 +2,7 @@
   "id": "MAP_SAFARI_ZONE_REST_HOUSE",
   "name": "SafariZone_RestHouse",
   "layout": "LAYOUT_SAFARI_ZONE_REST_HOUSE",
-  "music": "MUS_SAFARI",
+  "music": "MUS_SAFARI_ZONE",
   "region_map_section": "MAPSEC_SAFARI_ZONE",
   "requires_flash": false,
   "weather": "WEATHER_NONE",
@@ -60,14 +60,14 @@
       "y": 8,
       "elevation": 0,
       "dest_map": "MAP_SAFARI_ZONE_SOUTHWEST",
-      "dest_warp_id": 0
+      "dest_warp_id": "0"
     },
     {
       "x": 4,
       "y": 8,
       "elevation": 0,
       "dest_map": "MAP_SAFARI_ZONE_SOUTHWEST",
-      "dest_warp_id": 0
+      "dest_warp_id": "0"
     }
   ],
   "coord_events": [],

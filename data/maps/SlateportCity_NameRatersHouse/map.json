@@ -2,7 +2,7 @@
   "id": "MAP_SLATEPORT_CITY_NAME_RATERS_HOUSE",
   "name": "SlateportCity_NameRatersHouse",
   "layout": "LAYOUT_HOUSE_WITH_BED",
-  "music": "MUS_FINECITY",
+  "music": "MUS_SLATEPORT",
   "region_map_section": "MAPSEC_SLATEPORT_CITY",
   "requires_flash": false,
   "weather": "WEATHER_NONE",
@@ -34,14 +34,14 @@
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_SLATEPORT_CITY",
-      "dest_warp_id": 6
+      "dest_warp_id": "6"
     },
     {
       "x": 4,
       "y": 7,
       "elevation": 0,
       "dest_map": "MAP_SLATEPORT_CITY",
-      "dest_warp_id": 6
+      "dest_warp_id": "6"
     }
   ],
   "coord_events": [],

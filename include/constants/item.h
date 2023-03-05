@@ -16,5 +16,4 @@
 #define KEYITEMS_POCKET    4
 #define POCKETS_COUNT      5
 
-
 #endif // GUARD_ITEM_CONSTANTS_H

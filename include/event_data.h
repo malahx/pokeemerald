@@ -1,9 +1,6 @@
 #ifndef GUARD_EVENT_DATA_H
 #define GUARD_EVENT_DATA_H
 
-#include "constants/flags.h"
-#include "constants/vars.h"
-
 void InitEventData(void);
 void ClearTempFieldEventData(void);
 void ClearDailyFlags(void);
@@ -16,8 +13,8 @@ bool32 IsMysteryEventEnabled(void);
 void DisableMysteryGift(void);
 void EnableMysteryGift(void);
 bool32 IsMysteryGiftEnabled(void);
-void ClearMysteryEventFlags(void);
-void ClearMysteryEventVars(void);
+void ClearMysteryGiftFlags(void);
+void ClearMysteryGiftVars(void);
 void DisableResetRTC(void);
 void EnableResetRTC(void);
 bool32 CanResetRTC(void);

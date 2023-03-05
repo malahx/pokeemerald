@@ -2,7 +2,7 @@
   "id": "MAP_LILYCOVE_CITY_CONTEST_HALL",
   "name": "LilycoveCity_ContestHall",
   "layout": "LAYOUT_LILYCOVE_CITY_CONTEST_HALL",
-  "music": "MUS_CONLOBBY",
+  "music": "MUS_CONTEST_LOBBY",
   "region_map_section": "MAPSEC_LILYCOVE_CITY",
   "requires_flash": false,
   "weather": "WEATHER_NONE",
@@ -437,28 +437,28 @@
       "y": 32,
       "elevation": 0,
       "dest_map": "MAP_LILYCOVE_CITY_CONTEST_LOBBY",
-      "dest_warp_id": 2
+      "dest_warp_id": "2"
     },
     {
       "x": 30,
       "y": 32,
       "elevation": 0,
       "dest_map": "MAP_LILYCOVE_CITY_CONTEST_LOBBY",
-      "dest_warp_id": 3
+      "dest_warp_id": "3"
     },
     {
       "x": 20,
       "y": 32,
       "elevation": 0,
       "dest_map": "MAP_LILYCOVE_CITY_CONTEST_LOBBY",
-      "dest_warp_id": 2
+      "dest_warp_id": "2"
     },
     {
       "x": 31,
       "y": 32,
       "elevation": 0,
       "dest_map": "MAP_LILYCOVE_CITY_CONTEST_LOBBY",
-      "dest_warp_id": 3
+      "dest_warp_id": "3"
     }
   ],
   "coord_events": [],

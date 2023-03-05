@@ -52,9 +52,9 @@
 	special CallTrainerHillFunction
 	.endm
 
-	@ Unknown, dummied. Only side effect is setting VAR_RESULT to 0.
-	.macro trainerhill_clearresult
-	setvar VAR_0x8004, TRAINER_HILL_FUNC_CLEAR_RESULT
+	@ Unknown, dummied. E-Reader association is assumed. Only side effect is setting VAR_RESULT to 0.
+	.macro trainerhill_getusingereader
+	setvar VAR_0x8004, TRAINER_HILL_FUNC_GET_IN_EREADER_MODE
 	special CallTrainerHillFunction
 	.endm
 
@@ -100,9 +100,9 @@
 	special CallTrainerHillFunction
 	.endm
 
-	@ Set the challenge mode to HILL_TAG_* (Normal, Variety, Unique, or Expert)
-	.macro trainerhill_settag tag:req
-	setvar VAR_0x8004, TRAINER_HILL_FUNC_SET_TAG
-	copyvar VAR_0x8005, \tag
+	@ Set the challenge mode to HILL_MODE_* (Normal, Variety, Unique, or Expert)
+	.macro trainerhill_setmode mode:req
+	setvar VAR_0x8004, TRAINER_HILL_FUNC_SET_MODE
+	copyvar VAR_0x8005, \mode
 	special CallTrainerHillFunction
 	.endm
