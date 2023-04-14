@@ -39,6 +39,7 @@
 #include "roamer.h"
 #include "safari_zone.h"
 #include "scanline_effect.h"
+#include "shiny_lock.h"
 #include "sound.h"
 #include "sprite.h"
 #include "string_util.h"
@@ -5115,6 +5116,18 @@ static void HandleEndTurn_FinishBattle(void)
             && gBattleResults.shinyWildMon)
         {
             TryPutBreakingNewsOnAir();
+        }
+
+        if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK
+                                  | BATTLE_TYPE_LINK_IN_BATTLE
+                                  | BATTLE_TYPE_FIRST_BATTLE
+                                  | BATTLE_TYPE_WALLY_TUTORIAL
+                                  | BATTLE_TYPE_INGAME_PARTNER
+                                  | BATTLE_TYPE_TOWER_LINK_MULTI
+                                  | BATTLE_TYPE_RECORDED_LINK
+                                  | BATTLE_TYPE_FRONTIER)))
+        {
+            ShinyLockDeleteFaintedPartyPokemon();
         }
 
         RecordedBattle_SetPlaybackFinished();
