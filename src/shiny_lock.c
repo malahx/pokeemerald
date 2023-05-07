@@ -15,22 +15,22 @@ void ShinyLockDeletePartyMon(u8 position)
 void ShinyLockDeleteFaintedPartyPokemon(void) // @Kurausukun
 {
     u8 i, monTeam = 0;
-    struct Pokemon *pokemon;
+    struct Pokemon *mon;
     u32 monItem;
 
     for (i = 0; i < PARTY_SIZE; i++)
     {
-        pokemon = &gPlayerParty[i];
-        if (GetMonData(pokemon, MON_DATA_SANITY_HAS_SPECIES, NULL) && !GetMonData(pokemon, MON_DATA_IS_EGG, NULL))
+        mon = &gPlayerParty[i];
+        if (GetMonData(mon, MON_DATA_SANITY_HAS_SPECIES, NULL) && !GetMonData(mon, MON_DATA_IS_EGG, NULL))
         {
-            if (GetMonAilment(pokemon) == AILMENT_FNT)
+            if (GetMonAilment(mon) == AILMENT_FNT)
             {
-                monItem = GetMonData(pokemon, MON_DATA_HELD_ITEM, NULL);
+                monItem = GetMonData(mon, MON_DATA_HELD_ITEM, NULL);
 
                 if (monItem != ITEM_NONE)
                 {
                     AddBagItem(monItem, 1);
-                    SetMonData(pokemon, MON_DATA_HELD_ITEM, ITEM_NONE);
+                    SetMonData(mon, MON_DATA_HELD_ITEM, ITEM_NONE);
                 }
                 ShinyLockDeletePartyMon(i);
             }
@@ -47,18 +47,7 @@ void ShinyLockDeleteFaintedPartyPokemon(void) // @Kurausukun
         DoSoftReset();
     }
 }
-bool8 CurrentMonIsShiny()
+f32 ExpFactor(u8 enemyLevel, u8 monLevel)
 {
-    u8 index = gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)];
-    u8 personality = GetMonData(&gEnemyParty[index], MON_DATA_PERSONALITY, NULL);
-    u8 otId = GetMonData(&gEnemyParty[index], MON_DATA_OT_ID, NULL);
-    u8 shinyValue = GET_SHINY_VALUE(otId, personality);
-    return shinyValue < SHINY_ODDS;
-}
-bool8 EnnemyMonIsShiny(u8 index)
-{
-    u8 personality = GetMonData(&gEnemyParty[index], MON_DATA_PERSONALITY, NULL);
-    u8 otId = GetMonData(&gEnemyParty[index], MON_DATA_OT_ID, NULL);
-    u8 shinyValue = GET_SHINY_VALUE(otId, personality);
-    return shinyValue < SHINY_ODDS;
+    return max(1.0 / max(monLevel - enemyLevel, 1.0) - 0.1, 0.0);
 }

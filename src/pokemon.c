@@ -4390,7 +4390,7 @@ u8 GiveMonToPlayer(struct Pokemon *mon)
             break;
     }
 
-    if (i >= PARTY_SIZE || !CurrentMonIsShiny())
+    if (i >= PARTY_SIZE || !IsMonShiny(mon))
         return SendMonToPC(mon);
 
     CopyMon(&gPlayerParty[i], mon, sizeof(*mon));
