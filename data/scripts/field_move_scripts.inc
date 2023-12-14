@@ -1,16 +1,10 @@
 @ Interact with cuttable tree
 EventScript_CutTree::
 	lockall
-	goto_if_unset FLAG_BADGE01_GET, EventScript_CheckTreeCantCut
-	checkpartymove MOVE_CUT
+	checkitem ITEM_AXE, 1
+	compare VAR_RESULT, 0
 	goto_if_eq VAR_RESULT, PARTY_SIZE, EventScript_CheckTreeCantCut
-	setfieldeffectargument 0, VAR_RESULT
-	bufferpartymonnick STR_VAR_1, VAR_RESULT
-	buffermovename STR_VAR_2, MOVE_CUT
-	msgbox Text_WantToCut, MSGBOX_YESNO
-	goto_if_eq VAR_RESULT, NO, EventScript_CancelCut
-	msgbox Text_MonUsedFieldMove, MSGBOX_DEFAULT
-	closemessage
+	msgbox Text_PlayerUsedAxe, MSGBOX_DEFAULT
 	dofieldeffect FLDEFF_USE_CUT_ON_TREE
 	waitstate
 	goto EventScript_CutTreeDown
@@ -45,9 +39,8 @@ EventScript_CancelCut::
 	releaseall
 	end
 
-Text_WantToCut:
-	.string "Cet arbre semble pouvoir être COUPE.\p"
-	.string "Voulez-vous utiliser COUPE?$"
+Text_PlayerUsedAxe:
+	.string "{PLAYER} utilise la HACHE!$"
 
 Text_MonUsedFieldMove:
 	.string "{STR_VAR_1} utilise {STR_VAR_2}.$"
@@ -58,16 +51,10 @@ Text_CantCut:
 @ Interact with smashable rock
 EventScript_RockSmash::
 	lockall
-	goto_if_unset FLAG_BADGE03_GET, EventScript_CantSmashRock
-	checkpartymove MOVE_ROCK_SMASH
+	checkitem ITEM_HAMMER, 1
+	compare VAR_RESULT, 0
 	goto_if_eq VAR_RESULT, PARTY_SIZE, EventScript_CantSmashRock
-	setfieldeffectargument 0, VAR_RESULT
-	bufferpartymonnick STR_VAR_1, VAR_RESULT
-	buffermovename STR_VAR_2, MOVE_ROCK_SMASH
-	msgbox Text_WantToSmash, MSGBOX_YESNO
-	goto_if_eq VAR_RESULT, NO, EventScript_CancelSmash
-	msgbox Text_MonUsedFieldMove, MSGBOX_DEFAULT
-	closemessage
+	msgbox Text_PlayerUsedHammer, MSGBOX_DEFAULT
 	dofieldeffect FLDEFF_USE_ROCK_SMASH
 	waitstate
 	goto EventScript_SmashRock
@@ -111,24 +98,19 @@ EventScript_CancelSmash::
 	releaseall
 	end
 
-Text_WantToSmash:
-	.string "Ce bloc de pierre peut être brisé.\n"
-	.string "Voulez-vous utiliser ECLATE-ROC?$"
-
 Text_CantSmash:
 	.string "C’est un bloc de pierre solide, mais un\n"
-	.string "POKéMON peut être apte à le pulvériser.$"
+	.string "MARTEAU peut être apte à le pulvériser.$"
+
+Text_PlayerUsedHammer:
+	.string "{PLAYER} utilise le MARTEAU!$"	
 
 EventScript_StrengthBoulder::
 	lockall
-	goto_if_unset FLAG_BADGE04_GET, EventScript_CantStrength
 	goto_if_set FLAG_SYS_USE_STRENGTH, EventScript_CheckActivatedBoulder
-	checkpartymove MOVE_STRENGTH
-	goto_if_eq VAR_RESULT, PARTY_SIZE, EventScript_CantStrength
-	setfieldeffectargument 0, VAR_RESULT
-	msgbox Text_WantToStrength, MSGBOX_YESNO
-	goto_if_eq VAR_RESULT, NO, EventScript_CancelStrength
-	closemessage
+	checkitem ITEM_POWER_GLOVE, 1
+	goto_if_eq VAR_RESULT, 0, EventScript_CantStrength
+	msgbox Text_PlayerUsedGlove, MSGBOX_DEFAULT
 	dofieldeffect FLDEFF_USE_STRENGTH
 	waitstate
 	goto EventScript_ActivateStrength
@@ -143,7 +125,6 @@ EventScript_UseStrength::
 
 EventScript_ActivateStrength::
 	setflag FLAG_SYS_USE_STRENGTH
-	msgbox Text_MonUsedStrength, MSGBOX_DEFAULT
 	releaseall
 	end
 
@@ -162,39 +143,25 @@ EventScript_CancelStrength::
 	releaseall
 	end
 
-Text_WantToStrength:
-	.string "C’est un gros rocher, mais un POKéMON\n"
-	.string "peut être apte à le déplacer.\p"
-	.string "Voulez-vous utiliser FORCE?$"
-
-Text_MonUsedStrength:
-	.string "{STR_VAR_1} utilise FORCE.\p"
-	.string "La capacité FORCE de {STR_VAR_1}\n"
-	.string "permet de déplacer le rocher.$"
-
 Text_CantStrength:
 	.string "C’est un gros rocher, mais un POKéMON\n"
 	.string "peut être apte à le déplacer.$"
 
 Text_StrengthActivated:
-	.string "FORCE permet de déplacer le rocher.$"
+	.string "Il est désormais possible de déplacer\n"
+	.string "les blocs rocheux.$"
+	
+Text_PlayerUsedGlove:
+	.string "{PLAYER} utililse les GANTS DE POUVOIR!$"
 
 EventScript_UseWaterfall::
 	lockall
-	checkpartymove MOVE_WATERFALL
-	goto_if_eq VAR_RESULT, PARTY_SIZE, EventScript_CantWaterfall
-	bufferpartymonnick STR_VAR_1, VAR_RESULT
-	setfieldeffectargument 0, VAR_RESULT
-	msgbox Text_WantToWaterfall, MSGBOX_YESNO
-	goto_if_eq VAR_RESULT, NO, EventScript_EndWaterfall
-	msgbox Text_MonUsedWaterfall, MSGBOX_DEFAULT
+	msgbox Text_PlayerUsedWaterfall, MSGBOX_DEFAULT
 	dofieldeffect FLDEFF_USE_WATERFALL
 	goto EventScript_EndWaterfall
 
 EventScript_CannotUseWaterfall::
 	lockall
-
-EventScript_CantWaterfall::
 	msgbox Text_CantWaterfall, MSGBOX_DEFAULT
 
 EventScript_EndWaterfall::
@@ -205,23 +172,20 @@ Text_CantWaterfall:
 	.string "Un mur d’eau s’abat dans un vacarme\n"
 	.string "assourdissant.$"
 
-Text_WantToWaterfall:
-	.string "C’est une grande cascade.\n"
-	.string "Voulez-vous utiliser CASCADE?$"
-
-Text_MonUsedWaterfall:
-	.string "{STR_VAR_1} utilise CASCADE.$"
+Text_PlayerUsedWaterfall:
+	.string "{PLAYER} a escaladé la chute d'eau!$"
+	
+EventScript_DiveSpot::
+	lockall
+	checkitem ITEM_DIVING_SUIT, 1
+	goto_if_eq VAR_RESULT, 0, EventScript_CantDive
+	msgbox Text_PlayerUsedDive, MSGBOX_DEFAULT
+	dofieldeffect FLDEFF_USE_DIVE
+	goto EventScript_EndDive
+	end
 
 EventScript_UseDive::
 	lockall
-	checkpartymove MOVE_DIVE
-	goto_if_eq VAR_RESULT, PARTY_SIZE, EventScript_CantDive
-	bufferpartymonnick STR_VAR_1, VAR_RESULT
-	setfieldeffectargument 0, VAR_RESULT
-	setfieldeffectargument 1, 1
-	msgbox Text_WantToDive, MSGBOX_YESNO
-	goto_if_eq VAR_RESULT, NO, EventScript_EndDive
-	msgbox Text_MonUsedDive, MSGBOX_DEFAULT
 	dofieldeffect FLDEFF_USE_DIVE
 	goto EventScript_EndDive
 	end
@@ -237,14 +201,9 @@ EventScript_EndDive::
 
 EventScript_UseDiveUnderwater::
 	lockall
-	checkpartymove MOVE_DIVE
-	goto_if_eq VAR_RESULT, PARTY_SIZE, EventScript_CantSurface
-	bufferpartymonnick STR_VAR_1, VAR_RESULT
-	setfieldeffectargument 0, VAR_RESULT
-	setfieldeffectargument 1, 1
-	msgbox Text_WantToSurface, MSGBOX_YESNO
-	goto_if_eq VAR_RESULT, NO, EventScript_EndSurface
-	msgbox Text_MonUsedDive, MSGBOX_DEFAULT
+	checkitem ITEM_DIVING_SUIT, 1
+	goto_if_eq VAR_RESULT, 0, EventScript_CantSurface
+	msgbox Text_Surfaced, MSGBOX_DEFAULT
 	dofieldeffect FLDEFF_USE_DIVE
 	goto EventScript_EndSurface
 	end
@@ -260,22 +219,17 @@ EventScript_EndSurface::
 	end
 
 Text_CantDive:
-	.string "La mer est profonde. Un POKéMON\n"
-	.string "doit pouvoir aller sous l’eau ici.$"
+	.string "La mer est profonde. Un COMBINAISON DE\n"
+	.string "PLONGEE doit pouvoir aller sous l’eau ici.$"
 
-Text_WantToDive:
-	.string "La mer est profonde ici.\n"
-	.string "Voulez-vous utiliser PLONGEE?$"
-
-Text_MonUsedDive:
-	.string "{STR_VAR_1} utilise PLONGEE.$"
+Text_PlayerUsedDive:
+	.string "{PLAYER} enfiler la COMBINAISON DE PLONGEE!$"
+	
+Text_Surfaced:
+	.string "{PLAYER} est remonté à la surface!$"
 
 Text_CantSurface:
-	.string "Une lumière vient d’en haut. Un POKéMON\n"
-	.string "doit pouvoir remonter à la surface.$"
-
-Text_WantToSurface:
-	.string "Une lumière vient d’en haut.\n"
+	.string "Une lumière vient d’en haut.$"
 	.string "Voulez-vous utiliser PLONGEE?$"
 
 EventScript_FailSweetScent::
