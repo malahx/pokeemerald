@@ -40,6 +40,10 @@
 #define B_ACTION_NOTHING_FAINTED        13 // when choosing an action
 #define B_ACTION_NONE                   0xFF
 
+#define B_WIN_TYPE_SUPER_EFF     24
+#define B_WIN_TYPE_NOT_VERY_EFF  25
+#define B_WIN_TYPE_NO_EFF        26
+
 #define MOVE_TARGET_SELECTED            0
 #define MOVE_TARGET_DEPENDS             (1 << 0)
 #define MOVE_TARGET_USER_OR_SELECTED    (1 << 1)
