@@ -504,7 +504,7 @@ static void AddSearchWindowText(u16 species, u8 proximity, u8 searchLevel, bool8
     StringExpandPlaceholders(gStringVar4, sText_MonLevel);
     AddTextPrinterParameterized3(sDexNavSearchDataPtr->windowId, 0, WINDOW_COL_1, 0, sSearchFontColor, TEXT_SKIP_DRAW, gStringVar4);
     
-    if (proximity <= SNEAKING_PROXIMITY)
+    if (proximity <= 0)
     {
         PlaySE(SE_POKENAV_ON);
         // move
@@ -630,9 +630,9 @@ static bool8 DexNavPickTile(u8 environment, u8 areaX, u8 areaY, bool8 smallScan)
             //Check for objects
             nextIter = FALSE;
             if (TestPlayerAvatarFlags(PLAYER_AVATAR_FLAG_BIKE))
-                tileBuffer = SNEAKING_PROXIMITY + 3;
+                tileBuffer = 3;
             else if (TestPlayerAvatarFlags(PLAYER_AVATAR_FLAG_DASH))
-                tileBuffer = SNEAKING_PROXIMITY + 1;
+                tileBuffer = 1;
             
             if (GetPlayerDistance(topX, topY) <= tileBuffer)
             {
@@ -1064,23 +1064,7 @@ static void Task_DexNavSearch(u8 taskId)
             EndDexNavSearchSetupScript(EventScript_LostSignal, taskId);
         return;
     }
-    
-    if (sDexNavSearchDataPtr->proximity <= CREEPING_PROXIMITY && !gPlayerAvatar.creeping && task->tFrameCount > 60)
-    { //should be creeping but player walks normally
-        if (sDexNavSearchDataPtr->hiddenSearch && !task->tRevealed)
-            EndDexNavSearch(taskId);
-        else
-            EndDexNavSearchSetupScript(EventScript_MovedTooFast, taskId);
-        return;
-    }
-    
-    if (sDexNavSearchDataPtr->proximity <= SNEAKING_PROXIMITY && TestPlayerAvatarFlags(PLAYER_AVATAR_FLAG_DASH | PLAYER_AVATAR_FLAG_BIKE)) 
-    { // running/biking too close
-        //always do event script, even if player hasn't revealed a hidden mon. It's assumed they would be creeping towards it
-        EndDexNavSearchSetupScript(EventScript_MovedTooFast, taskId);
-        return;
-    }
-    
+
     if (ArePlayerFieldControlsLocked() == TRUE)
     { // check if script just executed
         //gSaveBlock1Ptr->dexNavChain = 0;  //issue with reusable repels
@@ -1111,7 +1095,7 @@ static void Task_DexNavSearch(u8 taskId)
     }
     
     if (sDexNavSearchDataPtr->hiddenSearch && !task->tRevealed &&
-        (JOY_NEW(R_BUTTON) || (sDexNavSearchDataPtr->proximity < CREEPING_PROXIMITY)))
+        (JOY_NEW(R_BUTTON)))
     {
         PlaySE(SE_DEX_SEARCH);
         ClearStdWindowAndFrameToTransparent(sDexNavSearchDataPtr->windowId, FALSE);
@@ -1183,7 +1167,7 @@ static void DexNavUpdateSearchWindow(u8 proximity, u8 searchLevel)
     if (sDexNavSearchDataPtr->starSpriteIds[2] != MAX_SPRITES)
         gSprites[sDexNavSearchDataPtr->starSpriteIds[2]].invisible = TRUE;
     
-    if (proximity <= SNEAKING_PROXIMITY)
+    if (proximity <= 0)
     {
         if (searchLevel > 2 && sDexNavSearchDataPtr->heldItem)
         {
