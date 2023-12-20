@@ -13,8 +13,7 @@ EventScript_NotFoundNearby::
     msgbox sText_NotFoundNearby, MSGBOX_SIGN
     end
 sText_NotFoundNearby:
-    .string "Aucun Pokémon à proximité.\n"
-    .string "Essayez de chercher dans une autre zone !$"
+    .string "Aucun Pokémon à proximité, Réessayez."
 
 
 EventScript_MovedTooFast::
