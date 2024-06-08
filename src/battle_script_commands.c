@@ -10148,7 +10148,7 @@ static void Cmd_trygivecaughtmonnick(void)
     switch (gBattleCommunication[MULTIUSE_STATE])
     {
     case 0:
-        if (!CurrentMonIsShiny())
+        if (!IsMonShiny(&gEnemyParty[gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]]))
         {
             BeginFastPaletteFade(3);
             gBattleCommunication[MULTIUSE_STATE] = 4;

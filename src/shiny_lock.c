@@ -47,18 +47,3 @@ void ShinyLockDeleteFaintedPartyPokemon(void) // @Kurausukun
         DoSoftReset();
     }
 }
-bool8 CurrentMonIsShiny()
-{
-    u8 index = gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)];
-    u8 personality = GetMonData(&gEnemyParty[index], MON_DATA_PERSONALITY, NULL);
-    u8 otId = GetMonData(&gEnemyParty[index], MON_DATA_OT_ID, NULL);
-    u8 shinyValue = GET_SHINY_VALUE(otId, personality);
-    return shinyValue < SHINY_ODDS;
-}
-bool8 EnnemyMonIsShiny(u8 index)
-{
-    u8 personality = GetMonData(&gEnemyParty[index], MON_DATA_PERSONALITY, NULL);
-    u8 otId = GetMonData(&gEnemyParty[index], MON_DATA_OT_ID, NULL);
-    u8 shinyValue = GET_SHINY_VALUE(otId, personality);
-    return shinyValue < SHINY_ODDS;
-}
