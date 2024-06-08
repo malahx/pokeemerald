@@ -165,20 +165,17 @@ BerryTree_Text_ItsSoftLoamySoil:
 	.string "It's soft, loamy soil.$"
 
 BerryTree_Text_BerryGrowthStage1: @ 8274560
-	.string "One {STR_VAR_1} was planted here.\n"
-	.string "Want to water it with the WAILMER PAIL?$"
+	.string "Une {STR_VAR_1} a été plantée ici.$"
 
 BerryTree_Text_BerryGrowthStage2: @ 8274579
-	.string "{STR_VAR_1} has sprouted.\n"
-	.string "Want to water it with the WAILMER PAIL?$"
+	.string "{STR_VAR_1} a bourgeonné.$"
 
 BerryTree_Text_BerryGrowthStage3: @ 827458A
-	.string "This {STR_VAR_1} plant is growing taller.\n"
-	.string "Want to water it with the WAILMER PAIL?$"
+	.string "Cette plante de {STR_VAR_1} a poussé.$"
 
 BerryTree_Text_BerryGrowthStage4:
-	.string "These {STR_VAR_1} flowers are blooming\n"
-	.string "{STR_VAR_2}. Want to water them?$"
+	.string "Ces fleurs de {STR_VAR_1} ont éclos et sont\n"
+	.string "{STR_VAR_2}.$"
 
 BerryTree_Text_CareAdverbGreat:
 	.string "very beautifully$"
