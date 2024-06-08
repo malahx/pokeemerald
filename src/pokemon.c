@@ -28,6 +28,7 @@
 #include "random.h"
 #include "recorded_battle.h"
 #include "rtc.h"
+#include "shiny_lock.h"
 #include "sound.h"
 #include "string_util.h"
 #include "strings.h"
@@ -2217,8 +2218,6 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
     else
         personality = Random32();
 
-    SetBoxMonData(boxMon, MON_DATA_PERSONALITY, &personality);
-
     // Determine original trainer ID
     if (otIdType == OT_ID_RANDOM_NO_SHINY)
     {
@@ -2241,6 +2240,13 @@ void CreateBoxMon(struct BoxPokemon *boxMon, u16 species, u8 level, u8 fixedIV, 
               | (gSaveBlock2Ptr->playerTrainerId[2] << 16)
               | (gSaveBlock2Ptr->playerTrainerId[3] << 24);
     }
+
+    if (gPlayerPartyCount == 0) {
+        while (GET_SHINY_VALUE(value, personality) >= SHINY_ODDS)
+            personality = Random32();
+    }
+
+    SetBoxMonData(boxMon, MON_DATA_PERSONALITY, &personality);
 
     SetBoxMonData(boxMon, MON_DATA_OT_ID, &value);
 
@@ -4404,7 +4410,7 @@ u8 GiveMonToPlayer(struct Pokemon *mon)
             break;
     }
 
-    if (i >= PARTY_SIZE)
+    if (i >= PARTY_SIZE || !CurrentMonIsShiny())
         return CopyMonToPC(mon);
 
     CopyMon(&gPlayerParty[i], mon, sizeof(*mon));
