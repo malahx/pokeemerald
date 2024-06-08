@@ -545,4 +545,6 @@ struct MonSpritesGfxManager *CreateMonSpritesGfxManager(u8 managerId, u8 mode);
 void DestroyMonSpritesGfxManager(u8 managerId);
 u8 *MonSpritesGfxManager_GetSpritePtr(u8 managerId, u8 spriteNum);
 
+void PurgeMonOrBoxMon(u8 boxId, u8 position);
+
 #endif // GUARD_POKEMON_H
